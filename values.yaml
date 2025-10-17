@@ -1,0 +1,54 @@
+# DEX Addon Configuration for Datanature PM
+namespace: vela-system
+
+dex:
+  issuer: "https://pm.datanature.dlytica.com/dex"
+  allowedOrigins: "https://pm.datanature.dlytica.com"
+  logLevel: "info"
+  skipApprovalScreen: true
+  enablePasswordDB: true
+  
+  # VelaUX Client Configuration
+  clientId: "velaux"
+  clientSecret: "EPj8DLz2eVyt9c5TwQPLTfNFdlua2ytd"
+  redirectURI: "https://pm.datanature.dlytica.com/dex/callback"
+  clientName: "VelaUX PM"
+  
+  # OIDC Connector for Keycloak
+  connectors:
+    oidc:
+      enabled: true
+      id: "keycloak"
+      name: "Keycloak"
+      issuer: "https://keycloak.datanature.dlytica.com/realms/master"
+      clientID: "velaux"
+      clientSecret: "EPj8DLz2eVyt9c5TwQPLTfNFdlua2ytd"
+      redirectURI: "https://pm.datanature.dlytica.com/dex/callback"
+    
+    # LDAP Connector (optional)
+    ldap:
+      enabled: false
+      id: "ldap"
+      name: "LDAP"
+      host: "dn-openldap.dn-openldap.svc.cluster.local:389"
+      insecureNoSSL: true
+      bindDN: "cn=admin,dc=dlytica,dc=com"
+      bindPW: "Dlytica@D123#"
+      userSearch:
+        baseDN: "dc=dlytica,dc=com"
+        filter: "(objectClass=person)"
+        username: "uid"
+        idAttr: "uid"
+        emailAttr: "mail"
+        nameAttr: "cn"
+      groupSearch:
+        baseDN: "dc=dlytica,dc=com"
+        filter: "(objectClass=groupOfNames)"
+        userAttr: "uid"
+        groupAttr: "member"
+        nameAttr: "cn"
+      usernamePrompt: "Enter your LDAP username"
+
+ingress:
+  host: "pm.datanature.dlytica.com"
+  clusterIssuer: "letsencrypt-prod"

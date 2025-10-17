@@ -1,0 +1,132 @@
+apiVersion: core.oam.dev/v1beta1
+kind: ComponentDefinition
+metadata:
+  name: dex-addon
+  namespace: vela-system
+  annotations:
+    definition.oam.dev/description: "DEX OIDC Identity Provider for KubeVela SSO"
+spec:
+  workload:
+    definition:
+      apiVersion: apps/v1
+      kind: Deployment
+  schematic:
+    cue:
+      template: |
+        output: {
+          apiVersion: "apps/v1"
+          kind:       "Deployment"
+          metadata: {
+            name:      context.name
+            namespace: context.namespace
+            labels: {
+              "app.oam.dev/component": context.name
+              "app.oam.dev/name":      context.appName
+            }
+          }
+          spec: {
+            replicas: parameter.replicas
+            selector: matchLabels: {
+              "app.oam.dev/component": context.name
+            }
+            template: {
+              metadata: labels: {
+                "app.oam.dev/component": context.name
+              }
+              spec: {
+                containers: [{
+                  name:  context.name
+                  image: parameter.image
+                  ports: [{
+                    containerPort: parameter.port
+                    name:          "http"
+                  }]
+                  env: [
+                    {
+                      name:  "DEX_OVERWRITE_INTEGRATION_CALLBACKS"
+                      value: "true"
+                    }
+                  ]
+                  volumeMounts: [{
+                    name:      "config"
+                    mountPath: "/etc/dex/cfg"
+                  }]
+                }]
+                volumes: [{
+                  name: "config"
+                  configMap: {
+                    name: "\(context.name)-config"
+                  }
+                }]
+              }
+            }
+          }
+        }
+        
+        parameter: {
+          //+usage=Number of replicas
+          replicas: *1 | int
+          //+usage=DEX image
+          image: *"quay.io/dexidp/dex:v2.36.0" | string
+          //+usage=DEX port
+          port: *5556 | int
+        }
+---
+apiVersion: core.oam.dev/v1beta1
+kind: TraitDefinition
+metadata:
+  name: dex-ingress
+  namespace: vela-system
+  annotations:
+    definition.oam.dev/description: "Ingress trait for DEX addon"
+spec:
+  schematic:
+    cue:
+      template: |
+        outputs: {
+          ingress: {
+            apiVersion: "networking.k8s.io/v1"
+            kind:       "Ingress"
+            metadata: {
+              name:      context.name + "-ingress"
+              namespace: context.namespace
+              annotations: {
+                "nginx.ingress.kubernetes.io/rewrite-target": "/"
+                "nginx.ingress.kubernetes.io/ssl-redirect":   "true"
+                "cert-manager.io/cluster-issuer":             parameter.clusterIssuer
+              }
+            }
+            spec: {
+              tls: [{
+                hosts: [parameter.host]
+                secretName: context.name + "-tls"
+              }]
+              rules: [{
+                host: parameter.host
+                http: {
+                  paths: [{
+                    path:     "/"
+                    pathType: "Prefix"
+                    backend: {
+                      service: {
+                        name: context.name + "-service"
+                        port: {
+                          number: parameter.port
+                        }
+                      }
+                    }
+                  }]
+                }
+              }]
+            }
+          }
+        }
+        
+        parameter: {
+          //+usage=Ingress host
+          host: string
+          //+usage=Cluster issuer for TLS
+          clusterIssuer: *"letsencrypt-prod" | string
+          //+usage=Service port
+          port: *5556 | int
+        }

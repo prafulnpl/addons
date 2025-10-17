@@ -1,0 +1,86 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: dex-config
+  namespace: {{.Values.namespace | default "vela-system"}}
+data:
+  config.yaml: |
+    issuer: {{.Values.dex.issuer | default "https://dex.example.com"}}
+    
+    storage:
+      type: sqlite3
+      config:
+        file: /var/dex/dex.db
+    
+    web:
+      http: 0.0.0.0:5556
+      allowedOrigins:
+        - {{.Values.dex.allowedOrigins | default "https://velaux.example.com"}}
+    
+    telemetry:
+      http: 0.0.0.0:5558
+    
+    logger:
+      level: {{.Values.dex.logLevel | default "info"}}
+      format: text
+    
+    oauth2:
+      grantTypes:
+        - password
+        - refresh_token
+        - authorization_code
+        - urn:ietf:params:oauth:grant-type:token-exchange
+      skipApprovalScreen: {{.Values.dex.skipApprovalScreen | default "true"}}
+    
+    enablePasswordDB: {{.Values.dex.enablePasswordDB | default "true"}}
+    
+    staticClients:
+    - id: {{.Values.dex.clientId | default "velaux"}}
+      secret: {{.Values.dex.clientSecret | default "velaux-secret"}}
+      redirectURIs:
+        - {{.Values.dex.redirectURI | default "https://velaux.example.com/dex/callback"}}
+      name: {{.Values.dex.clientName | default "VelaUX"}}
+      public: false
+    
+    connectors:
+    {{- if .Values.dex.connectors.oidc.enabled }}
+    - type: oidc
+      id: {{.Values.dex.connectors.oidc.id | default "oidc"}}
+      name: {{.Values.dex.connectors.oidc.name | default "OIDC"}}
+      config:
+        issuer: {{.Values.dex.connectors.oidc.issuer}}
+        clientID: {{.Values.dex.connectors.oidc.clientID}}
+        clientSecret: {{.Values.dex.connectors.oidc.clientSecret}}
+        redirectURI: {{.Values.dex.connectors.oidc.redirectURI}}
+        scopes:
+          - openid
+          - profile
+          - email
+          - groups
+    {{- end }}
+    {{- if .Values.dex.connectors.ldap.enabled }}
+    - type: ldap
+      id: {{.Values.dex.connectors.ldap.id | default "ldap"}}
+      name: {{.Values.dex.connectors.ldap.name | default "LDAP"}}
+      config:
+        host: {{.Values.dex.connectors.ldap.host}}
+        insecureNoSSL: {{.Values.dex.connectors.ldap.insecureNoSSL | default "true"}}
+        {{- if .Values.dex.connectors.ldap.bindDN }}
+        bindDN: {{.Values.dex.connectors.ldap.bindDN}}
+        bindPW: {{.Values.dex.connectors.ldap.bindPW}}
+        {{- end }}
+        userSearch:
+          baseDN: {{.Values.dex.connectors.ldap.userSearch.baseDN}}
+          filter: "{{.Values.dex.connectors.ldap.userSearch.filter | default "(objectClass=person)"}}"
+          username: {{.Values.dex.connectors.ldap.userSearch.username | default "uid"}}
+          idAttr: {{.Values.dex.connectors.ldap.userSearch.idAttr | default "uid"}}
+          emailAttr: {{.Values.dex.connectors.ldap.userSearch.emailAttr | default "mail"}}
+          nameAttr: {{.Values.dex.connectors.ldap.userSearch.nameAttr | default "cn"}}
+        groupSearch:
+          baseDN: {{.Values.dex.connectors.ldap.groupSearch.baseDN}}
+          filter: "{{.Values.dex.connectors.ldap.groupSearch.filter | default "(objectClass=groupOfNames)"}}"
+          userAttr: {{.Values.dex.connectors.ldap.groupSearch.userAttr | default "uid"}}
+          groupAttr: {{.Values.dex.connectors.ldap.groupSearch.groupAttr | default "member"}}
+          nameAttr: {{.Values.dex.connectors.ldap.groupSearch.nameAttr | default "cn"}}
+      usernamePrompt: {{.Values.dex.connectors.ldap.usernamePrompt | default "Enter your LDAP username"}}
+    {{- end }}

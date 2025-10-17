@@ -1,0 +1,62 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: dex
+  namespace: {{.Values.namespace | default "vela-system"}}
+  labels:
+    app: dex
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: dex
+  template:
+    metadata:
+      labels:
+        app: dex
+    spec:
+      containers:
+      - name: dex
+        image: {{.Values.dex.image | default "quay.io/dexidp/dex:v2.36.0"}}
+        ports:
+        - containerPort: 5556
+          name: http
+        - containerPort: 5558
+          name: grpc
+        args:
+        - /usr/local/bin/dex
+        - serve
+        - /etc/dex/cfg/config.yaml
+        volumeMounts:
+        - name: config
+          mountPath: /etc/dex/cfg
+        - name: storage
+          mountPath: /var/dex
+        env:
+        - name: DEX_OVERWRITE_INTEGRATION_CALLBACKS
+          value: "true"
+      volumes:
+      - name: config
+        configMap:
+          name: dex-config
+      - name: storage
+        emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: dex-service
+  namespace: {{.Values.namespace | default "vela-system"}}
+  labels:
+    app: dex
+spec:
+  selector:
+    app: dex
+  ports:
+  - name: http
+    port: 5556
+    targetPort: 5556
+  - name: grpc
+    port: 5558
+    targetPort: 5558
+  type: ClusterIP
