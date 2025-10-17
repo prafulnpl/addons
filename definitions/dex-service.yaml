@@ -1,0 +1,37 @@
+apiVersion: core.oam.dev/v1beta1
+kind: ComponentDefinition
+metadata:
+  name: dex-service
+  namespace: vela-system
+  annotations:
+    definition.oam.dev/description: "DEX Service for KubeVela SSO"
+spec:
+  workload:
+    definition:
+      apiVersion: v1
+      kind: Service
+  schematic:
+    cue:
+      template: |
+        output: {
+          apiVersion: "v1"
+          kind:       "Service"
+          metadata: {
+            name:      "dex-service"
+            namespace: "vela-system"
+            labels: {
+              "app": "dex"
+            }
+          }
+          spec: {
+            selector: {
+              "app": "dex"
+            }
+            ports: [{
+              name:       "http"
+              port:       5556
+              targetPort: 5556
+            }]
+            type: "ClusterIP"
+          }
+        }

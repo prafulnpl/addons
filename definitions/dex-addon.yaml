@@ -70,39 +70,3 @@ spec:
             }
           }
         }
-        
-        outputs: {
-          service: {
-            apiVersion: "v1"
-            kind:       "Service"
-            metadata: {
-              name:      "dex-service"
-              namespace: "vela-system"
-              labels: {
-                "app": "dex"
-              }
-            }
-            spec: {
-              selector: {
-                "app": "dex"
-              }
-              ports: [{
-                name:       "http"
-                port:       5556
-                targetPort: 5556
-              }]
-              type: "ClusterIP"
-            }
-          }
-          configmap: {
-            apiVersion: "v1"
-            kind:       "ConfigMap"
-            metadata: {
-              name:      "dex-config"
-              namespace: "vela-system"
-            }
-            data: {
-              "config.yaml": "issuer: https://pm.datanature.dlytica.com/dex\n\nstorage:\n  type: sqlite3\n  config:\n    file: /var/dex/dex.db\n\nweb:\n  http: 0.0.0.0:5556\n  allowedOrigins:\n    - https://pm.datanature.dlytica.com\n\ntelemetry:\n  http: 0.0.0.0:5558\n\nlogger:\n  level: info\n  format: text\n\noauth2:\n  grantTypes:\n    - password\n    - refresh_token\n    - authorization_code\n    - urn:ietf:params:oauth:grant-type:token-exchange\n  skipApprovalScreen: true\n\nenablePasswordDB: true\n\nstaticClients:\n- id: velaux\n  secret: EPj8DLz2eVyt9c5TwQPLTfNFdlua2ytd\n  redirectURIs:\n    - https://pm.datanature.dlytica.com/dex/callback\n  name: VelaUX PM\n  public: false\n\nconnectors:\n- type: oidc\n  id: keycloak\n  name: Keycloak\n  config:\n    issuer: https://keycloak.datanature.dlytica.com/realms/master\n    clientID: velaux\n    clientSecret: EPj8DLz2eVyt9c5TwQPLTfNFdlua2ytd\n    redirectURI: https://pm.datanature.dlytica.com/dex/callback\n    scopes:\n      - openid\n      - profile\n      - email\n      - groups"
-            }
-          }
-        }

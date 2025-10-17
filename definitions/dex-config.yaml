@@ -1,0 +1,26 @@
+apiVersion: core.oam.dev/v1beta1
+kind: ComponentDefinition
+metadata:
+  name: dex-config
+  namespace: vela-system
+  annotations:
+    definition.oam.dev/description: "DEX Configuration for KubeVela SSO"
+spec:
+  workload:
+    definition:
+      apiVersion: v1
+      kind: ConfigMap
+  schematic:
+    cue:
+      template: |
+        output: {
+          apiVersion: "v1"
+          kind:       "ConfigMap"
+          metadata: {
+            name:      "dex-config"
+            namespace: "vela-system"
+          }
+          data: {
+            "config.yaml": "issuer: https://pm.datanature.dlytica.com/dex\n\nstorage:\n  type: sqlite3\n  config:\n    file: /var/dex/dex.db\n\nweb:\n  http: 0.0.0.0:5556\n  allowedOrigins:\n    - https://pm.datanature.dlytica.com\n\ntelemetry:\n  http: 0.0.0.0:5558\n\nlogger:\n  level: info\n  format: text\n\noauth2:\n  grantTypes:\n    - password\n    - refresh_token\n    - authorization_code\n    - urn:ietf:params:oauth:grant-type:token-exchange\n  skipApprovalScreen: true\n\nenablePasswordDB: true\n\nstaticClients:\n- id: velaux\n  secret: EPj8DLz2eVyt9c5TwQPLTfNFdlua2ytd\n  redirectURIs:\n    - https://pm.datanature.dlytica.com/dex/callback\n  name: VelaUX PM\n  public: false\n\nconnectors:\n- type: oidc\n  id: keycloak\n  name: Keycloak\n  config:\n    issuer: https://keycloak.datanature.dlytica.com/realms/master\n    clientID: velaux\n    clientSecret: EPj8DLz2eVyt9c5TwQPLTfNFdlua2ytd\n    redirectURI: https://pm.datanature.dlytica.com/dex/callback\n    scopes:\n      - openid\n      - profile\n      - email\n      - groups"
+          }
+        }
