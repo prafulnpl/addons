@@ -1,0 +1,25 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: dex-ingress
+  namespace: {{.Values.namespace | default "vela-system"}}
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    cert-manager.io/cluster-issuer: {{.Values.ingress.clusterIssuer | default "letsencrypt-prod"}}
+spec:
+  tls:
+  - hosts:
+    - {{.Values.ingress.host}}
+    secretName: dex-tls
+  rules:
+  - host: {{.Values.ingress.host}}
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: dex-service
+            port:
+              number: 5556

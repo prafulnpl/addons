@@ -1,0 +1,13 @@
+name: dex
+version: 1.0.0
+description: "DEX OIDC Identity Provider for KubeVela SSO"
+icon: "https://raw.githubusercontent.com/dexidp/dex/master/Documentation/logos/dex-glyph-color.png"
+url: "https://github.com/dexidp/dex"
+tags:
+  - sso
+  - oidc
+  - authentication
+  - identity
+maintainers:
+  - name: Datanature Team
+    email: team@datanature.com
