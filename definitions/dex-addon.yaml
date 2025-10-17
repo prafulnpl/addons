@@ -17,29 +17,41 @@ spec:
           apiVersion: "apps/v1"
           kind:       "Deployment"
           metadata: {
-            name:      context.name
-            namespace: context.namespace
+            name:      "dex"
+            namespace: "vela-system"
             labels: {
-              "app.oam.dev/component": context.name
-              "app.oam.dev/name":      context.appName
+              "app": "dex"
             }
           }
           spec: {
-            replicas: parameter.replicas
-            selector: matchLabels: {
-              "app.oam.dev/component": context.name
+            replicas: 1
+            selector: {
+              matchLabels: {
+                "app": "dex"
+              }
             }
             template: {
-              metadata: labels: {
-                "app.oam.dev/component": context.name
+              metadata: {
+                labels: {
+                  "app": "dex"
+                }
               }
               spec: {
                 containers: [{
-                  name:  context.name
-                  image: parameter.image
+                  name:  "dex"
+                  image: "quay.io/dexidp/dex:v2.36.0"
                   ports: [{
-                    containerPort: parameter.port
+                    containerPort: 5556
                     name:          "http"
+                  }]
+                  args: [
+                    "/usr/local/bin/dex",
+                    "serve",
+                    "/etc/dex/cfg/config.yaml"
+                  ]
+                  volumeMounts: [{
+                    name:      "config"
+                    mountPath: "/etc/dex/cfg"
                   }]
                   env: [
                     {
@@ -47,15 +59,11 @@ spec:
                       value: "true"
                     }
                   ]
-                  volumeMounts: [{
-                    name:      "config"
-                    mountPath: "/etc/dex/cfg"
-                  }]
                 }]
                 volumes: [{
                   name: "config"
                   configMap: {
-                    name: "\(context.name)-config"
+                    name: "dex-config"
                   }
                 }]
               }
@@ -63,70 +71,90 @@ spec:
           }
         }
         
-        parameter: {
-          //+usage=Number of replicas
-          replicas: *1 | int
-          //+usage=DEX image
-          image: *"quay.io/dexidp/dex:v2.36.0" | string
-          //+usage=DEX port
-          port: *5556 | int
-        }
----
-apiVersion: core.oam.dev/v1beta1
-kind: TraitDefinition
-metadata:
-  name: dex-ingress
-  namespace: vela-system
-  annotations:
-    definition.oam.dev/description: "Ingress trait for DEX addon"
-spec:
-  schematic:
-    cue:
-      template: |
         outputs: {
-          ingress: {
-            apiVersion: "networking.k8s.io/v1"
-            kind:       "Ingress"
+          service: {
+            apiVersion: "v1"
+            kind:       "Service"
             metadata: {
-              name:      context.name + "-ingress"
-              namespace: context.namespace
-              annotations: {
-                "nginx.ingress.kubernetes.io/rewrite-target": "/"
-                "nginx.ingress.kubernetes.io/ssl-redirect":   "true"
-                "cert-manager.io/cluster-issuer":             parameter.clusterIssuer
+              name:      "dex-service"
+              namespace: "vela-system"
+              labels: {
+                "app": "dex"
               }
             }
             spec: {
-              tls: [{
-                hosts: [parameter.host]
-                secretName: context.name + "-tls"
+              selector: {
+                "app": "dex"
+              }
+              ports: [{
+                name:       "http"
+                port:       5556
+                targetPort: 5556
               }]
-              rules: [{
-                host: parameter.host
-                http: {
-                  paths: [{
-                    path:     "/"
-                    pathType: "Prefix"
-                    backend: {
-                      service: {
-                        name: context.name + "-service"
-                        port: {
-                          number: parameter.port
-                        }
-                      }
-                    }
-                  }]
-                }
-              }]
+              type: "ClusterIP"
             }
           }
-        }
-        
-        parameter: {
-          //+usage=Ingress host
-          host: string
-          //+usage=Cluster issuer for TLS
-          clusterIssuer: *"letsencrypt-prod" | string
-          //+usage=Service port
-          port: *5556 | int
+          configmap: {
+            apiVersion: "v1"
+            kind:       "ConfigMap"
+            metadata: {
+              name:      "dex-config"
+              namespace: "vela-system"
+            }
+            data: {
+              "config.yaml": """
+                issuer: https://pm.datanature.dlytica.com/dex
+                
+                storage:
+                  type: sqlite3
+                  config:
+                    file: /var/dex/dex.db
+                
+                web:
+                  http: 0.0.0.0:5556
+                  allowedOrigins:
+                    - https://pm.datanature.dlytica.com
+                
+                telemetry:
+                  http: 0.0.0.0:5558
+                
+                logger:
+                  level: info
+                  format: text
+                
+                oauth2:
+                  grantTypes:
+                    - password
+                    - refresh_token
+                    - authorization_code
+                    - urn:ietf:params:oauth:grant-type:token-exchange
+                  skipApprovalScreen: true
+                
+                enablePasswordDB: true
+                
+                staticClients:
+                - id: velaux
+                  secret: EPj8DLz2eVyt9c5TwQPLTfNFdlua2ytd
+                  redirectURIs:
+                    - https://pm.datanature.dlytica.com/dex/callback
+                  name: VelaUX PM
+                  public: false
+                
+                connectors:
+                - type: oidc
+                  id: keycloak
+                  name: Keycloak
+                  config:
+                    issuer: https://keycloak.datanature.dlytica.com/realms/master
+                    clientID: velaux
+                    clientSecret: EPj8DLz2eVyt9c5TwQPLTfNFdlua2ytd
+                    redirectURI: https://pm.datanature.dlytica.com/dex/callback
+                    scopes:
+                      - openid
+                      - profile
+                      - email
+                      - groups
+              """
+            }
+          }
         }
